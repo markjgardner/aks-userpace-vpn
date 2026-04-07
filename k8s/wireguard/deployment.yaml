@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: wireguard
-          image: linuxserver/wireguard:latest
+          image: linuxserver/wireguard:1.0.20210914
           ports:
             - containerPort: 51820
               protocol: UDP
@@ -35,13 +35,15 @@ spec:
             - name: PEERDNS
               value: "auto"
             - name: INTERNAL_SUBNET
-              value: "10.13.13.0"
+              value: "10.13.13.0/24"
             - name: ALLOWEDIPS
               value: "10.13.13.0/24"
+            # Set SERVERURL to the LoadBalancer's external IP or DNS name.
+            # After deploying, retrieve it with:
+            #   kubectl get svc wireguard -n app1 -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+            # Then update this value or use 'auto' to attempt auto-detection.
             - name: SERVERURL
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.hostIP
+              value: "auto"
           securityContext:
             capabilities:
               add:
@@ -62,11 +64,24 @@ spec:
               memory: 256Mi
       volumes:
         - name: wg-config
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: wireguard-config
         - name: host-modules
           hostPath:
             path: /lib/modules
             type: Directory
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wireguard-config
+  namespace: app1
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
 ---
 apiVersion: v1
 kind: Service
