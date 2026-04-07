@@ -1,0 +1,23 @@
+# Allow all pods within the app1 namespace to communicate with each other.
+# This enables microservice-to-microservice traffic and allows the WireGuard
+# pod to forward VPN client traffic to internal services.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-intra-namespace
+  namespace: app1
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: app1
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: app1
