@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wireguard
+  namespace: app1
+  labels:
+    app: wireguard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wireguard
+  template:
+    metadata:
+      labels:
+        app: wireguard
+    spec:
+      containers:
+        - name: wireguard
+          image: linuxserver/wireguard:latest
+          ports:
+            - containerPort: 51820
+              protocol: UDP
+          env:
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+            - name: TZ
+              value: "UTC"
+            - name: SERVERPORT
+              value: "51820"
+            - name: PEERS
+              value: "user1"
+            - name: PEERDNS
+              value: "auto"
+            - name: INTERNAL_SUBNET
+              value: "10.13.13.0"
+            - name: ALLOWEDIPS
+              value: "10.13.13.0/24"
+            - name: SERVERURL
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+                - SYS_MODULE
+          volumeMounts:
+            - name: wg-config
+              mountPath: /config
+            - name: host-modules
+              mountPath: /lib/modules
+              readOnly: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+      volumes:
+        - name: wg-config
+          emptyDir: {}
+        - name: host-modules
+          hostPath:
+            path: /lib/modules
+            type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wireguard
+  namespace: app1
+  labels:
+    app: wireguard
+spec:
+  type: LoadBalancer
+  selector:
+    app: wireguard
+  ports:
+    - port: 51820
+      targetPort: 51820
+      protocol: UDP
